@@ -1,4 +1,3 @@
-
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || window.OPENAI_API_KEY || "";
 
 let mediaRecorder;
@@ -50,8 +49,8 @@ async function processAudio(audioBlob) {
   if (!speechText) return;
 
   transcript += speechText;
-  let sentences = transcript.split(/[。！？
-]/g).filter(Boolean);
+  // 修正：正則表達式不能換行
+  let sentences = transcript.split(/[。！？\n]/g).filter(Boolean);
   if (sentences.length > 1) {
     let latestSentence = sentences.slice(-2, -1)[0];
     const translated = await translateToChinese(latestSentence);
@@ -116,3 +115,4 @@ async function translateToChinese(japanese) {
     return "";
   }
 }
+
