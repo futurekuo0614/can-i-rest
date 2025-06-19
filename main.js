@@ -1,5 +1,3 @@
-const OPENAI_API_KEY = window.OPENAI_API_KEY || "";
-
 let mediaRecorder;
 let audioChunks = [];
 let isRecording = false;
@@ -11,10 +9,6 @@ const stopBtn = document.getElementById('stopBtn');
 const subtitlesDiv = document.getElementById('subtitles');
 
 startBtn.onclick = async () => {
-  if (!OPENAI_API_KEY) {
-    alert("請設定 OPENAI_API_KEY（Vercel 環境變數）");
-    return;
-  }
   startBtn.disabled = true;
   stopBtn.disabled = false;
   subtitlesDiv.innerText = "開始錄音...";
@@ -45,15 +39,14 @@ stopBtn.onclick = () => {
 
 async function processAudio(audioBlob) {
   const base64 = await blobToBase64(audioBlob);
-  const speechText = await fetchTranscriptionFromOpenAI(base64);
+  const speechText = await fetchTranscriptionFromProxy(base64);
   if (!speechText) return;
 
   transcript += speechText;
-  // 修正：正則表達式不能換行
   let sentences = transcript.split(/[。！？\n]/g).filter(Boolean);
   if (sentences.length > 1) {
     let latestSentence = sentences.slice(-2, -1)[0];
-    const translated = await translateToChinese(latestSentence);
+    const translated = await translateToChineseProxy(latestSentence);
     subtitlesDiv.innerText += "\n" + translated;
     lastSentence = sentences[sentences.length - 1];
     transcript = lastSentence;
@@ -68,20 +61,13 @@ function blobToBase64(blob) {
   });
 }
 
-async function fetchTranscriptionFromOpenAI(audioBase64) {
+// 用自己的 API Proxy
+async function fetchTranscriptionFromProxy(audioBase64) {
   try {
-    const resp = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        prompt: "請將以下語音內容辨識為日文文字",
-        audio: audioBase64,
-        response_format: "text"
-      })
+    const resp = await fetch('/api/translate', {
+      method: 'POST',
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "transcribe", audioBase64 })
     });
     const data = await resp.json();
     return data.text || "";
@@ -91,28 +77,21 @@ async function fetchTranscriptionFromOpenAI(audioBase64) {
   }
 }
 
-async function translateToChinese(japanese) {
+async function translateToChineseProxy(japanese) {
   try {
-    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: "你是一個專業的日文到中文即時口譯。" },
-          { role: "user", content: `請將下列日文翻譯成中文：\n${japanese}` }
-        ],
-        temperature: 0.2
-      })
+    const resp = await fetch('/api/translate', {
+      method: 'POST',
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "translate", japanese })
     });
     const data = await resp.json();
     return data.choices?.[0]?.message?.content?.trim() || "";
   } catch (e) {
     console.error(e);
     return "";
+  }
+}
+
   }
 }
 
