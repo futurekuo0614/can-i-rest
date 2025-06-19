@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>即時字幕翻譯</title>
+</head>
+<body style="font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto;">
+  <h1>🗣️ 即時語音字幕翻譯（安全部署版）</h1>
+  <label for="lang-select">選擇語音語言：</label>
+  <select id="lang-select">
+    <option value="ja-JP">日文</option>
+    <option value="en-US">英文</option>
+    <option value="zh-TW">中文</option>
+    <option value="ko-KR">韓文</option>
+  </select>
+  <button id="start-btn">🎙️ 開始翻譯</button>
+  <div style="margin-top: 20px;">
+    <h3>🔊 原文字幕</h3>
+    <div id="live-original" style="font-size: 1.2em; background: #eee; padding: 10px;"></div>
+    <h3>🌐 翻譯結果</h3>
+    <div id="live-translation" style="font-size: 1.2em; background: #dff0d8; padding: 10px;"></div>
+  </div>
+  <script>
+    const startBtn = document.getElementById('start-btn');
+    const langSelect = document.getElementById('lang-select');
+    const originalDiv = document.getElementById('live-original');
+    const translationDiv = document.getElementById('live-translation');
+    let recognition;
+    let lastInterim = '';
+    let translateTimeout;
+
+    async function translateLiveText(text) {
+      if (!text.trim()) return;
+      try {
+        const res = await fetch('/api/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+        const data = await res.json();
+        translationDiv.textContent = data.translation || '(翻譯失敗)';
+      } catch (e) {
+        console.error('翻譯失敗', e);
+        translationDiv.textContent = '(翻譯失敗)';
+      }
+    }
+
+    startBtn.addEventListener('click', () => {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert('此瀏覽器不支援語音辨識');
+        return;
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.lang = langSelect.value;
+      recognition.interimResults = true;
+      recognition.continuous = true;
+
+      recognition.onresult = (event) => {
+        let newText = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const result = event.results[i];
+          if (!result.isFinal) newText += result[0].transcript;
+        }
+        if (newText && newText !== lastInterim) {
+          lastInterim = newText;
+          originalDiv.textContent = newText;
+          clearTimeout(translateTimeout);
+          translateTimeout = setTimeout(() => translateLiveText(newText), 100);
+        }
+      };
+
+      recognition.onerror = (e) => console.error('辨識錯誤:', e);
+      recognition.onend = () => recognition.start();
+      recognition.start();
+      startBtn.disabled = true;
+      startBtn.textContent = '🎙️ 辨識中...';
+    });
+  </script>
+</body>
+</html>
