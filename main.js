@@ -1,4 +1,4 @@
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || window.OPENAI_API_KEY || "";
+const OPENAI_API_KEY = window.OPENAI_API_KEY || "";
 
 let mediaRecorder;
 let audioChunks = [];
