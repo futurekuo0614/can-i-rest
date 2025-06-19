@@ -61,35 +61,3 @@ function blobToBase64(blob) {
   });
 }
 
-// 用自己的 API Proxy
-async function fetchTranscriptionFromProxy(audioBase64) {
-  try {
-    const resp = await fetch('/api/translate', {
-      method: 'POST',
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "transcribe", audioBase64 })
-    });
-    const data = await resp.json();
-    return data.text || "";
-  } catch (e) {
-    console.error(e);
-    return "";
-  }
-}
-
-async function translateToChineseProxy(japanese) {
-  try {
-    const resp = await fetch('/api/translate', {
-      method: 'POST',
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "translate", japanese })
-    });
-    const data = await resp.json();
-    return data.choices?.[0]?.message?.content?.trim() || "";
-  } catch (e) {
-    console.error(e);
-    return "";
-  }
-}
-
-
