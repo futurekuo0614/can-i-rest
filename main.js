@@ -92,6 +92,4 @@ async function translateToChineseProxy(japanese) {
   }
 }
 
-  }
-}
 
